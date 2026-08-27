@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📱 AI 话术生成器 · 二手手机版</title>
+<style>
+  :root {
+    --bg: #f0f4f8; --card: #ffffff; --ink: #1f2937; --muted: #6b7280;
+    --brand: #2563eb; --brand-2: #0ea5e9; --green: #16a34a; --border: #e5e7eb;
+    --amber: #f59e0b; --red: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(160deg, #eef4fb 0%, #f6f8fb 100%);
+    color: var(--ink); min-height: 100vh; padding: 20px 14px 60px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 20px; }
+  header h1 { font-size: 24px; letter-spacing: .5px; }
+  header p { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+  .card {
+    background: var(--card); border-radius: 16px; padding: 20px;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, .06); margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,.6);
+  }
+  .card h2 { font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .card h2::before { content: ""; width: 4px; height: 16px; background: var(--brand); border-radius: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 12px; }
+  .field.full { grid-column: 1 / -1; }
+  label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: #fafbfc; color: var(--ink);
+    transition: border-color .15s, box-shadow .15s; outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); background: #fff;
+  }
+  textarea { resize: vertical; min-height: 52px; }
+
+  .btn {
+    width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    box-shadow: 0 4px 14px rgba(37, 99, 235, .3); transition: transform .1s, opacity .2s;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .btn.ghost {
+    background: #fff; color: var(--brand); border: 1.5px solid var(--brand);
+    box-shadow: none; font-weight: 600; padding: 8px 14px; width: auto;
+  }
+
+  /* 结果区 */
+  .result-item {
+    background: #f8fafc; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 12px; position: relative;
+  }
+  .result-item .tag {
+    display: inline-block; font-size: 11px; font-weight: 700; color: #fff;
+    background: var(--brand); border-radius: 20px; padding: 2px 10px; margin-bottom: 8px;
+  }
+  .result-item .tag.wechat { background: var(--green); }
+  .result-item .tag.xianyu { background: var(--amber); }
+  .result-item pre {
+    white-space: pre-wrap; word-break: break-word; font-family: inherit;
+    font-size: 13.5px; line-height: 1.75; color: #334155;
+  }
+  .copy-btn {
+    position: absolute; top: 12px; right: 12px; font-size: 11.5px; color: var(--brand);
+    background: #eff6ff; border: none; border-radius: 8px; padding: 4px 10px; cursor: pointer; font-weight: 600;
+  }
+  .copy-btn:hover { background: #dbeafe; }
+  .copy-btn.ok { color: var(--green); background: #f0fdf4; }
+
+  /* 提示条 */
+  .notice { font-size: 12.5px; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; line-height: 1.6; }
+  .notice.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .notice.warn { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  .notice.good { background: #f0fdf4; color: #14532d; border: 1px solid #bbf7d0; }
+  .notice a { color: inherit; font-weight: 700; }
+
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--brand); font-weight: 600; user-select: none; }
+  .key-row { display: flex; gap: 8px; margin-top: 10px; }
+  .key-row input { flex: 1; }
+  .key-row .btn.ghost { flex-shrink: 0; }
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px; border: 2.5px solid rgba(255,255,255,.4);
+    border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -2px; margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .example-box {
+    background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 12px; padding: 12px 14px; font-size: 12.5px; color: #92400e; line-height: 1.7;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 11.5px; margin-top: 24px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📱 AI 话术生成器</h1>
+    <p>输入手机信息 → 自动生成朋友圈 / 闲鱼文案 · 二手手机专用</p>
+  </header>
+
+  <!-- 表单 -->
+  <div class="card">
+    <h2>手机信息</h2>
+    <div class="grid">
+      <div class="field full"><label>机型（如 iPhone 16 Pro Max）</label><input id="model" placeholder="iPhone 16 Pro Max" value=""></div>
+      <div class="field"><label>存储</label><select id="storage"><option>128G</option><option>256G</option><option>512G</option><option>1TB</option></select></div>
+      <div class="field"><label>成色</label><select id="condition"><option>全新</option><option>95新</option><option>9成新</option><option>8成新</option></select></div>
+      <div class="field"><label>电池效率 %</label><input id="battery" type="number" placeholder="95" value="95"></div>
+      <div class="field"><label>价格（元）</label><input id="price" type="number" placeholder="5400" value=""></div>
+      <div class="field full"><label>卖点 / 备注（可选：配件、保修、来源等）</label><textarea id="extras" placeholder="如：国行双卡、在保到明年3月、送壳膜充电器、支持验机"></textarea></div>
+    </div>
+    <button class="btn" id="genBtn" onclick="generate()">✨ 生成文案</button>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card" id="resultCard" style="display:none;">
+    <h2>生成结果</h2>
+    <div id="result"></div>
+    <div class="notice good">💡 生成的文案可以直接复制发朋友圈 / 挂闲鱼。同一台手机可以多次生成，换换风格。</div>
+  </div>
+
+  <!-- 无 Key 提示 / 示例 -->
+  <div class="card" id="noKeyCard">
+    <div class="notice info">🔑 <b>还没填 API Key</b>：下方先看示例效果。填了 Key 才能真·生成。</div>
+    <div class="example-box" id="exampleBox"></div>
+  </div>
+
+  <!-- API 设置 -->
+  <div class="card">
+    <details>
+      <summary>⚙️ DeepSeek API 设置（首次使用必看）</summary>
+      <div class="notice info" style="margin-top:10px;">
+        1. 打开 <a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a> 注册 → 充值（10 元能用很久）<br>
+        2. 左侧「API Keys」→ 创建 Key（sk- 开头）<br>
+        3. 粘贴到下面保存。Key 只存在你自己浏览器里，不会上传到任何服务器
+      </div>
+      <div class="key-row">
+        <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off">
+        <button class="btn ghost" onclick="saveKey()">保存</button>
+      </div>
+      <div class="notice good" id="keyStatus" style="display:none; margin-top:10px;">✅ Key 已保存（本地）</div>
+    </details>
+  </div>
+
+  <footer>
+    这是你 2 年 AI 计划 · 阶段1（W2-W3）的作品：调用大模型 API + Prompt 工程<br>
+    下一步：学会后把它部署到公网，朋友也能用
+  </footer>
+</div>
+
+<script>
+// ============ DeepSeek API 调用 ============
+const API_URL = "https://api.deepseek.com/chat/completions";
+const MODEL = "deepseek-chat";
+const KEY_STORE = "ds_api_key_v1";
+
+// 系统提示词 —— Prompt 工程的核心，改这里 = 改风格
+const SYSTEM_PROMPT = `你是一位资深的二手手机卖家兼文案专家，深谙朋友圈和闲鱼平台的语言风格和成交心理。
+你的任务：根据用户提供的手机信息，生成能直接复制使用的销售文案。
+
+【朋友圈文案要求】
+- 口语化、真诚、有信任感，像真人卖家发的，不要官方腔
+- 突出核心卖点（成色、电池、保修、配件、价格优势）
+- 适当用 emoji（不超过 6 个）、适当分段，制造呼吸感
+- 3 条风格必须明显不同：第1条"专业实在型"（数据说话）、第2条"接地气型"（像朋友推荐）、第3条"限时紧迫型"（制造稀缺感）
+- 每条 80~150 字，末尾可加一句引导私聊的话（但别重复）
+
+【闲鱼文案要求】
+- 标题：20~30 字，包含机型+存储+核心卖点+价格，符合闲鱼搜索习惯，不堆砌无意义关键词
+- 描述：开头第一句就要说清楚"这是什么+成色+价格"，然后列卖点，最后写交易说明（支持验机/当面交易/顺丰保价）
+- 价格用 "¥数字" 格式
+
+【输出格式】严格按下面的格式输出，用 === 分隔，不要有多余的话：
+朋友圈文案1（专业实在型）：
+...
+===
+朋友圈文案2（接地气型）：
+...
+===
+朋友圈文案3（限时紧迫型）：
+...
+===
+闲鱼标题：
+...
+===
+闲鱼描述：
+...`;
+
+// 内置示例（没 Key 时展示）
+const EXAMPLE = `朋友圈文案1（专业实在型）：
+📱 iPhone 16 Pro Max 256G 国行双卡
+电池 95，成色 95 新，无拆无修，爱思全绿
+在保到明年 3 月，支持当面验机 / 爱思沙漏随便测
+💰 5400 出，行情价，不虚标
+有意的兄弟直接私聊，手慢无 ✅
+
+===
+朋友圈文案2（接地气型）：
+到货一台 16 Pro Max 256G 😎
+95 新，电池 95，国行双卡，还在保修期
+自己收来的，价格实在 5400
+送壳膜充电器，外地顺丰保价，本地可当面验机
+想要的滴滴我，别问在不在，直接说型号 👌
+
+===
+朋友圈文案3（限时紧迫型）：
+⚠️ 就这一台！iPhone 16 Pro Max 256G
+95 新 / 电池 95 / 国行双卡 / 在保
+5400，比行情低一档，因为想快点出
+周末前卖掉，卖不掉就自己用了
+懂的来，先到先得 🔥
+
+===
+闲鱼标题：
+iPhone 16 Pro Max 256G 国行双卡 95新 电池95 在保 5400
+
+===
+闲鱼描述：
+出 iPhone 16 Pro Max 256G，国行双卡，95 新，电池效率 95，无拆无修，爱思全绿，还在保（到明年3月）。
+【卖点】原装正品、成色好、电池耐用、保修期内
+【配件】送壳膜充电器
+【交易】支持当面验机；外地顺丰保价，到货验机再签收；支持平台交易。诚心要可小刀，墨迹勿扰。`;
+
+// ============ 页面逻辑 ============
+const $ = id => document.getElementById(id);
+
+function getKey() { return localStorage.getItem(KEY_STORE) || ""; }
+
+function saveKey() {
+  const k = $("apiKey").value.trim();
+  if (!k.startsWith("sk-")) { alert("Key 格式不对，应该是 sk- 开头"); return; }
+  localStorage.setItem(KEY_STORE, k);
+  $("keyStatus").style.display = "block";
+  setTimeout(() => $("keyStatus").style.display = "none", 2500);
+  refreshUI();
+}
+
+function refreshUI() {
+  const hasKey = !!getKey();
+  $("noKeyCard").style.display = hasKey ? "none" : "block";
+  if (!hasKey) $("exampleBox").textContent = EXAMPLE;
+}
+
+function buildUserPrompt() {
+  const info = [
+    "机型：" + $("model").value.trim(),
+    "存储：" + $("storage").value,
+    "成色：" + $("condition").value,
+    "电池效率：" + $("battery").value + "%",
+    "价格：" + $("price").value.trim() + " 元",
+  ];
+  if ($("extras").value.trim()) info.push("卖点/备注：" + $("extras").value.trim());
+  return info.join("\n");
+}
+
+function parseResult(text) {
+  const sections = text.split(/===+/);
+  const items = [];
+  const labels = [
+    ["朋友圈文案1", "wechat"], ["朋友圈文案2", "wechat"], ["朋友圈文案3", "wechat"],
+    ["闲鱼标题", "xianyu"], ["闲鱼描述", "xianyu"]
+  ];
+  sections.forEach((sec, i) => {
+    sec = sec.trim();
+    if (!sec) return;
+    if (i < labels.length) {
+      const title = labels[i][0];
+      // 去掉可能带的行首标签（如"朋友圈文案1（专业实在型）："）
+      let content = sec.replace(/^(朋友圈文案\d（[^）]*）|闲鱼标题|闲鱼描述)\s*[:：]?\s*/, "");
+      items.push({ title, tag: labels[i][1], content: content.trim() });
+    }
+  });
+  return items;
+}
+
+function render(items) {
+  const box = $("result");
+  box.innerHTML = "";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "result-item";
+    div.innerHTML = `<span class="tag ${item.tag}">${item.title}</span>
+      <button class="copy-btn" onclick="copyText(this)">复制</button>
+      <pre>${escapeHtml(item.content)}</pre>`;
+    box.appendChild(div);
+  });
+  $("resultCard").style.display = "block";
+  $("resultCard").scrollIntoView({ behavior: "smooth" });
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function copyText(btn) {
+  const pre = btn.parentElement.querySelector("pre");
+  const text = pre.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = "✅ 已复制";
+    btn.classList.add("ok");
+    setTimeout(() => { btn.textContent = "复制"; btn.classList.remove("ok"); }, 1500);
+  });
+}
+
+async function generate() {
+  const model = $("model").value.trim();
+  if (!model) { alert("先填机型"); $("model").focus(); return; }
+  const key = getKey();
+  if (!key) { alert("请先在上方 ⚙️ 设置里填入 DeepSeek API Key"); return; }
+
+  const btn = $("genBtn");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span>AI 正在写文案...`;
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: buildUserPrompt() }
+        ],
+        temperature: 0.85,
+        max_tokens: 1500
+      })
+    });
+
+    if (!res.ok) {
+      let msg = "请求失败（" + res.status + "）";
+      try { const j = await res.json(); msg = j.error?.message || msg; } catch(e) {}
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || "";
+    if (!text) throw new Error("AI 返回了空内容");
+    render(parseResult(text));
+  } catch (err) {
+    alert("生成失败：" + err.message + "\n\n检查：① Key 是否正确 ② 余额是否充足 ③ 网络");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "✨ 生成文案";
+  }
+}
+
+// 初始化
+if (getKey()) $("apiKey").value = getKey();
+refreshUI();
+</script>
+</body>
+</html>
